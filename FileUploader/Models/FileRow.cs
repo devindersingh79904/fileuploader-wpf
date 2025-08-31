@@ -1,94 +1,48 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.IO;
-using System.Linq;
-using System.Net.NetworkInformation;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FileUploader.Models
 {
-    public class FileRow: INotifyPropertyChanged
+    public class FileRow : INotifyPropertyChanged
     {
         public int Index { get; set; }
         public string FileName { get; set; }
-        public string SizeHuman { get; set; }
-        public string FilePath { get; set; }
+        public string FullPath { get; set; }   // <-- used by MainViewModel
+        public long SizeBytes { get; set; }
 
-        private string _status;
-        private double _progress;
-        private string _errorMessage;
+        private int _progress;
+        public int Progress
+        {
+            get => _progress;
+            set { if (_progress != value) { _progress = value; OnPropertyChanged(nameof(Progress)); } }
+        }
 
+        private string _status = "Ready";
         public string Status
         {
-            get { return _status; }
-            set
-            {
-                if (_status != value)
-                {
-                    _status = value;
-                    OnPropertyChanged(nameof(Status));
-                }
-            }
+            get => _status;
+            set { if (_status != value) { _status = value; OnPropertyChanged(nameof(Status)); } }
         }
 
-        public double Progress
-        {
-            get { return _progress; }
-            set
-            {
-                if (Math.Abs(_progress - value) > 0.001)
-                {
-                    _progress = value;
-                    OnPropertyChanged(nameof(Progress));
-                }
-            }
-        }
-
-        public string ErrorMessage
-        {
-            get { return _errorMessage; }
-            set
-            {
-                if (_errorMessage != value)
-                {
-                    _errorMessage = value;
-                    OnPropertyChanged(nameof(ErrorMessage));
-                }
-            }
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        // Optional convenience for UI bindings
+        public string SizeText => $"{SizeBytes / 1024d / 1024d:0.##} MB";
 
         public static FileRow FromPath(string path, int index)
         {
-            var info = new FileInfo(path);
-
+            var fi = new FileInfo(path);
             return new FileRow
             {
                 Index = index,
-                FilePath = path,
-                FileName = Path.GetFileName(path),
-                SizeHuman = FormatSize(info.Length),
-
-                // Initial default values
-                Status = "Pending",
-                Progress = 0,
-                ErrorMessage = string.Empty
+                FileName = fi.Name,
+                FullPath = fi.FullName,
+                SizeBytes = fi.Exists ? fi.Length : 0,
+                Status = "Ready",
+                Progress = 0
             };
         }
 
-        private static string FormatSize(long bytes)
-        {
-            string[] units = { "B", "KB", "MB", "GB", "TB" };
-            double size = bytes; int i = 0;
-            while (size >= 1024 && i < units.Length - 1) { size /= 1024; i++; }
-            return $"{size:0.##} {units[i]}";
-        }
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged(string name) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

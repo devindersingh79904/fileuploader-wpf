@@ -21,3 +21,4 @@ C:\Users\devin\source\repos\FileUploader\FileUploader\obj\Debug\net8.0-windows\r
 C:\Users\devin\source\repos\FileUploader\FileUploader\bin\Debug\net8.0-windows\Newtonsoft.Json.dll
 C:\Users\devin\source\repos\FileUploader\FileUploader\obj\Debug\net8.0-windows\FileUploader.csproj.AssemblyReference.cache
 C:\Users\devin\source\repos\FileUploader\FileUploader\obj\Debug\net8.0-windows\FileUplo.A14E4986.Up2Date
+C:\Users\devin\source\repos\FileUploader\FileUploader\obj\Debug\net8.0-windows\FileUploader.sourcelink.json

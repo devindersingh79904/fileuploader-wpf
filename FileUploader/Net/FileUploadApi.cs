@@ -16,55 +16,60 @@ public class FileUploadApi : IFileUploadApi
     public FileUploadApi()
     {
         _http = new HttpClient();
+        // IMPORTANT: AppConfig.BaseUrl must end with "/api/v1/upload/"
         _http.BaseAddress = new Uri(AppConfig.BaseUrl);
-        // optional: _http.Timeout = TimeSpan.FromSeconds(100);
+        // _http.Timeout = TimeSpan.FromSeconds(100);
     }
 
     public async Task<StartSessionResponse> StartSessionAsync(StartSessionRequest request, CancellationToken ct)
     {
-        string body = JsonConvert.SerializeObject(request);
-        StringContent content = new StringContent(body, Encoding.UTF8, "application/json");
-        HttpResponseMessage r = await _http.PostAsync("start", content, ct);
-        r.EnsureSuccessStatusCode();
-        string s = await r.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<StartSessionResponse>(s);
+        var r = await _http.PostAsync("start", AsJson(request), ct);
+        if (!r.IsSuccessStatusCode) await ThrowWithBody(r, ct);
+        return JsonConvert.DeserializeObject<StartSessionResponse>(await r.Content.ReadAsStringAsync());
     }
 
     public async Task<RegisterFileResponse> RegisterFileAsync(string sessionId, RegisterFileRequest request, CancellationToken ct)
     {
-        string body = JsonConvert.SerializeObject(request);
-        StringContent content = new StringContent(body, Encoding.UTF8, "application/json");
-        HttpResponseMessage r = await _http.PostAsync(sessionId + "/files", content, ct);
-        r.EnsureSuccessStatusCode();
-        string s = await r.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<RegisterFileResponse>(s);
+        var r = await _http.PostAsync($"{sessionId}/files", AsJson(request), ct);
+        if (!r.IsSuccessStatusCode) await ThrowWithBody(r, ct);
+        return JsonConvert.DeserializeObject<RegisterFileResponse>(await r.Content.ReadAsStringAsync());
     }
 
     public async Task<PresignPartUrlResponse> PresignPartUrlAsync(string fileId, PresignPartUrlRequest request, CancellationToken ct)
     {
-        string body = JsonConvert.SerializeObject(request);
-        StringContent content = new StringContent(body, Encoding.UTF8, "application/json");
-        HttpResponseMessage r = await _http.PostAsync(fileId + "/parts/url", content, ct);
-        r.EnsureSuccessStatusCode();
-        string s = await r.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<PresignPartUrlResponse>(s);
+        // NOTE: correct route is under files/{fileId}/parts/url
+        var r = await _http.PostAsync($"files/{fileId}/parts/url", AsJson(request), ct);
+        if (!r.IsSuccessStatusCode) await ThrowWithBody(r, ct);
+        return JsonConvert.DeserializeObject<PresignPartUrlResponse>(await r.Content.ReadAsStringAsync());
     }
 
     public async Task CompleteFileAsync(string fileId, CompleteFileRequest request, CancellationToken ct)
     {
-        string body = JsonConvert.SerializeObject(request);
-        StringContent content = new StringContent(body, Encoding.UTF8, "application/json");
-        HttpRequestMessage req = new HttpRequestMessage(HttpMethod.Patch, fileId + "/complete");
-        req.Content = content;
-        HttpResponseMessage r = await _http.SendAsync(req, ct);
-        r.EnsureSuccessStatusCode();
+        // NOTE: correct route is files/{fileId}/complete (PATCH)
+        var req = new HttpRequestMessage(HttpMethod.Patch, $"files/{fileId}/complete")
+        {
+            Content = AsJson(request)
+        };
+        var r = await _http.SendAsync(req, ct);
+        if (!r.IsSuccessStatusCode) await ThrowWithBody(r, ct);
     }
 
     public async Task<SessionStatusResponse> GetSessionStatusAsync(string sessionId, CancellationToken ct)
     {
-        HttpResponseMessage r = await _http.GetAsync(sessionId + "/status", ct);
-        r.EnsureSuccessStatusCode();
-        string s = await r.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<SessionStatusResponse>(s);
+        var r = await _http.GetAsync($"{sessionId}/status", ct);
+        if (!r.IsSuccessStatusCode) await ThrowWithBody(r, ct);
+        return JsonConvert.DeserializeObject<SessionStatusResponse>(await r.Content.ReadAsStringAsync());
+    }
+
+    // ---- helpers ----
+    private static StringContent AsJson(object o)
+        => new StringContent(JsonConvert.SerializeObject(o), Encoding.UTF8, "application/json");
+
+    private static async Task ThrowWithBody(HttpResponseMessage r, CancellationToken ct)
+    {
+        string body = string.Empty;
+        try { body = await r.Content.ReadAsStringAsync(ct); } catch { /* ignore */ }
+        throw new HttpRequestException(
+            $"API {r.RequestMessage?.Method} {r.RequestMessage?.RequestUri} failed: {(int)r.StatusCode} {r.ReasonPhrase}. Body: {body}");
     }
 }

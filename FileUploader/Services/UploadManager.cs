@@ -3,6 +3,7 @@ using FileUploader.Dtos;
 using FileUploader.Dtos.Request;
 using FileUploader.Dtos.Responses;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,56 +20,63 @@ public class UploadManager : IUploadManager
     {
         _api = api;
         _uploader = uploader;
-        ChunkBytes = AppConfig.ChunkBytes;
+        ChunkBytes = AppConfig.ChunkBytes; // e.g., 5 * 1024 * 1024
         StopRequested = false;
     }
 
-    public async Task<string> StartUploadAsync(string userId, string[] filePaths, Action<string, int> reportProgress, CancellationToken ct)
+    public async Task<string> StartUploadAsync(
+        string userId,
+        string[] filePaths,
+        Action<string, int> reportProgress,
+        CancellationToken ct)
     {
-        // 1) Start session
-        StartSessionRequest sreq = new StartSessionRequest();
-        sreq.UserId = userId;
-        StartSessionResponse sresp = await _api.StartSessionAsync(sreq, ct);
+        if (filePaths == null || filePaths.Length == 0)
+            throw new ArgumentException("No files to upload.", nameof(filePaths));
+
+        // Start or reuse session server-side
+        var sresp = await _api.StartSessionAsync(new StartSessionRequest { UserId = userId }, ct);
         string sessionId = sresp.SessionId;
 
-        int i = 0;
-        while (i < filePaths.Length)
+        for (int i = 0; i < filePaths.Length; i++)
         {
             if (StopRequested) break;
-
-            string path = filePaths[i];
-            FileInfo fi = new FileInfo(path);
-            long size = fi.Length;
-
-            // 2) compute chunkCount = ceil(size / ChunkBytes)
-            int chunkCount = (int)(size / (long)ChunkBytes);
-            if ((size % (long)ChunkBytes) != 0) chunkCount = chunkCount + 1;
-            if (chunkCount < 1) chunkCount = 1;
-
-            // 3) register file
-            RegisterFileRequest rreq = new RegisterFileRequest();
-            rreq.FileName = fi.Name;
-            rreq.FileSize = size;
-            rreq.ChunkCount = chunkCount;
-
-            RegisterFileResponse rresp = await _api.RegisterFileAsync(sessionId, rreq, ct);
-            string fileId = rresp.FileId;
-            string uploadId = rresp.UploadId;
-
-            // keep parts + etags
-            System.Collections.Generic.List<CompleteFileRequest.PartETag> parts =
-                new System.Collections.Generic.List<CompleteFileRequest.PartETag>();
-
-            // 4) loop chunks
-            FileStream fs = File.OpenRead(path);
-            long sent = 0;
-            int partNumber = 1;
+            var path = filePaths[i];
 
             try
             {
+                ct.ThrowIfCancellationRequested();
+
+                if (!File.Exists(path))
+                    throw new FileNotFoundException("File not found", path);
+
+                var fi = new FileInfo(path);
+                long size = fi.Length;
+
+                // compute part count
+                int chunkCount = (int)(size / (long)ChunkBytes);
+                if ((size % (long)ChunkBytes) != 0) chunkCount++;
+                if (chunkCount < 1) chunkCount = 1;
+
+                var rresp = await _api.RegisterFileAsync(sessionId, new RegisterFileRequest
+                {
+                    FileName = fi.Name,
+                    FileSize = size,
+                    ChunkCount = chunkCount
+                }, ct);
+
+                string fileId = rresp.FileId;
+                string uploadId = rresp.UploadId;
+
+                var parts = new List<CompleteFileRequest.PartETag>(chunkCount);
+
+                using var fs = File.OpenRead(path);
+                long sent = 0;
+                int partNumber = 1;
+
                 while (sent < size)
                 {
                     if (StopRequested) break;
+                    ct.ThrowIfCancellationRequested();
 
                     long remaining = size - sent;
                     int len = (int)Math.Min((long)ChunkBytes, remaining);
@@ -77,56 +85,53 @@ public class UploadManager : IUploadManager
                     int read = await fs.ReadAsync(buffer, 0, len, ct);
                     if (read == 0) break;
 
-                    // 5) presign this part
-                    PresignPartUrlRequest preq = new PresignPartUrlRequest();
-                    preq.PartNumber = partNumber;
+                    // IMPORTANT: Many backends require the exact part size for signing
+                    var pres = await _api.PresignPartUrlAsync(fileId, new PresignPartUrlRequest
+                    {
+                        PartNumber = partNumber,
+                        //PartSizeBytes = read           // <--- key fix
+                    }, ct);
 
-                    PresignPartUrlResponse pres = await _api.PresignPartUrlAsync(fileId, preq, ct);
-
-                    // 6) PUT the part to S3 and capture ETag
-                    MemoryStream ms = new MemoryStream(buffer, 0, read, false, true);
+                    using var ms = new MemoryStream(buffer, 0, read, writable: false, publiclyVisible: true);
                     string etag = await _uploader.PutChunkAsync(pres.Url, ms, read, ct);
-                    ms.Dispose();
 
-                    // 7) add to parts
-                    CompleteFileRequest.PartETag pe = new CompleteFileRequest.PartETag();
-                    pe.PartNumber = partNumber;
-                    pe.ETag = etag;
-                    parts.Add(pe);
+                    parts.Add(new CompleteFileRequest.PartETag
+                    {
+                        PartNumber = partNumber,
+                        ETag = etag
+                    });
 
-                    sent = sent + read;
-                    partNumber = partNumber + 1;
+                    sent += read;
+                    partNumber++;
 
-                    // 8) update progress 0..100
-                    int percent = (int)Math.Round(100.0 * (double)sent / (double)size);
-                    if (reportProgress != null) reportProgress(path, percent);
+                    int percent = (int)Math.Round(100.0 * sent / Math.Max(1, size));
+                    reportProgress?.Invoke(path, Math.Clamp(percent, 0, 100));
+                }
+
+                if (!StopRequested)
+                {
+                    await _api.CompleteFileAsync(fileId, new CompleteFileRequest
+                    {
+                        UploadId = uploadId,
+                        Parts = parts
+                    }, ct);
+
+                    reportProgress?.Invoke(path, 100);
                 }
             }
-            finally
+            catch (OperationCanceledException)
             {
-                fs.Dispose();
+                throw; // propagate cancel
             }
-
-            // 9) complete file (only if not paused)
-            if (!StopRequested)
+            catch (Exception)
             {
-                CompleteFileRequest creq = new CompleteFileRequest();
-                creq.UploadId = uploadId;
-                creq.Parts = parts;
-
-                await _api.CompleteFileAsync(fileId, creq, ct);
-
-                if (reportProgress != null) reportProgress(path, 100);
+                // mark failed but continue with next file
+                reportProgress?.Invoke(path, 0);
             }
-
-            i = i + 1;
         }
 
         return sessionId;
     }
 
-    public void Pause()
-    {
-        StopRequested = true;
-    }
+    public void Pause() => StopRequested = true;
 }
