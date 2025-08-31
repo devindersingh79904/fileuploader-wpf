@@ -6,7 +6,6 @@ C:\Users\devin\source\repos\FileUploader\FileUploader\bin\Debug\net8.0-windows\F
 C:\Users\devin\source\repos\FileUploader\FileUploader\obj\Debug\net8.0-windows\Views\MainWindow.g.cs
 C:\Users\devin\source\repos\FileUploader\FileUploader\obj\Debug\net8.0-windows\App.g.cs
 C:\Users\devin\source\repos\FileUploader\FileUploader\obj\Debug\net8.0-windows\FileUploader_MarkupCompile.cache
-C:\Users\devin\source\repos\FileUploader\FileUploader\obj\Debug\net8.0-windows\FileUploader_MarkupCompile.lref
 C:\Users\devin\source\repos\FileUploader\FileUploader\obj\Debug\net8.0-windows\Views\MainWindow.baml
 C:\Users\devin\source\repos\FileUploader\FileUploader\obj\Debug\net8.0-windows\FileUploader.g.resources
 C:\Users\devin\source\repos\FileUploader\FileUploader\obj\Debug\net8.0-windows\FileUploader.GeneratedMSBuildEditorConfig.editorconfig

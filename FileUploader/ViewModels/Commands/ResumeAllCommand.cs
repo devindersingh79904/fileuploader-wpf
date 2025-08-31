@@ -1,16 +1,10 @@
-﻿using FileUploader.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
 using System.Windows.Input;
 
 namespace FileUploader.ViewModels.Commands
 {
-    public class ResumeAllCommand:ICommand
+    public class ResumeAllCommand : ICommand
     {
-
         private readonly MainViewModel _vm;
 
         public ResumeAllCommand(MainViewModel vm)
@@ -18,31 +12,41 @@ namespace FileUploader.ViewModels.Commands
             _vm = vm ?? throw new ArgumentNullException(nameof(vm));
         }
 
-
         public event EventHandler? CanExecuteChanged;
 
         public bool CanExecute(object? parameter)
         {
-            // Enabled only if there are files
-            return _vm.Files != null && _vm.Files.Count > 0;
+            if (_vm.Files == null || _vm.Files.Count == 0) return false;
+
+            // Enable only if at least one file is paused
+            foreach (var row in _vm.Files)
+            {
+                if (string.Equals(row.Status, "Paused", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
         }
 
         public void Execute(object? parameter)
         {
             if (_vm.Files == null || _vm.Files.Count == 0) return;
 
-            foreach (FileRow row in _vm.Files)
-            {
-                // You can use "Queued" or "Resumed" depending on your design
-                row.Status = "Queed";
-            }
+            // Delegates to VM:
+            // - unfreezes the queue
+            // - sets Paused -> Queued
+            // - re-enqueues paused items
+            // - UploadManager resumes from saved chunk state
+            _vm.ResumeAllUploads();
 
-            _vm.SessionStatus = "Uploads resumed";
+            _vm.SessionStatus = "Resumed paused uploads.";
+
+            // Commands reevaluate now that state changed
+            RaiseCanExecuteChanged();                   // this command (likely disables if nothing remains paused)
+            _vm.PauseAllCommand.RaiseCanExecuteChanged(); // pause may be available again
+            _vm.StartUploadCommand?.RaiseCanExecuteChanged();
+            _vm.CancelAllCommand?.RaiseCanExecuteChanged();
         }
 
-        public void RaiseCanExecuteChanged()
-        {
-            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-        }
+        public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
 }

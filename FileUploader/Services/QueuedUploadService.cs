@@ -37,8 +37,8 @@ public sealed class QueuedUploadService : IDisposable
 
     public void PauseAll()
     {
-        _queue.Pause();
-        _manager.Pause(); // stops after current chunk
+        _queue.Pause();   // freeze future jobs
+        _manager.Pause(); // cancel the in-flight call and stop after current chunk
     }
 
     public void ResumeAll() => _queue.Resume();

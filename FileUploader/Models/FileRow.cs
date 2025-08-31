@@ -6,15 +6,24 @@ namespace FileUploader.Models
     public class FileRow : INotifyPropertyChanged
     {
         public int Index { get; set; }
+
         public string FileName { get; set; }
-        public string FullPath { get; set; }   // <-- used by MainViewModel
+        public string FullPath { get; set; }
         public long SizeBytes { get; set; }
 
         private int _progress;
         public int Progress
         {
             get => _progress;
-            set { if (_progress != value) { _progress = value; OnPropertyChanged(nameof(Progress)); } }
+            set
+            {
+                if (_progress != value)
+                {
+                    _progress = value;
+                    OnPropertyChanged(nameof(Progress));
+                    OnPropertyChanged(nameof(ProgressText)); // auto-refresh text
+                }
+            }
         }
 
         private string _status = "Ready";
@@ -24,8 +33,10 @@ namespace FileUploader.Models
             set { if (_status != value) { _status = value; OnPropertyChanged(nameof(Status)); } }
         }
 
-        // Optional convenience for UI bindings
+        // ----- Convenience props for binding -----
         public string SizeText => $"{SizeBytes / 1024d / 1024d:0.##} MB";
+
+        public string ProgressText => $"{Progress}%";
 
         public static FileRow FromPath(string path, int index)
         {
@@ -42,7 +53,7 @@ namespace FileUploader.Models
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged(string name) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        protected void OnPropertyChanged(string propertyName) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

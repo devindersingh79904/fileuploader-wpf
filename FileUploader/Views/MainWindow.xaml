@@ -3,81 +3,80 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:FileUploader.Views"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800"
+        Title="File Uploader"
+        Height="640" Width="1000"
         Loaded="Window_Loaded">
-    <DockPanel Margin="16">
-        <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,8">
-            <Button Content="Select Files" Width="120" Command="{Binding SelectFilesCommand}" />
-            <Button Content="Start Upload" Width="120" Margin="8,0,0,0" Command="{Binding StartUploadCommand}" />
-            <Button Content="Pause" Width="80" Margin="8,0,0,0" Command="{Binding PauseAllCommand}" />
-            <Button Content="Resume" Width="80" Margin="8,0,0,0" Command="{Binding ResumeAllCommand}"/>
-            <Button Content="Cancel All" Width="120" Margin="16,0,0,0" Command="{Binding CancelAllCommand}" />
+
+    <DockPanel>
+
+        <!-- Top controls -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10" VerticalAlignment="Center">
+            <Button Content="Select Files" Command="{Binding SelectFilesCommand}" Margin="0,0,8,0"/>
+            <Button Content="Delete Selected" Command="{Binding DeleteFileCommand}" Margin="0,0,16,0"/>
+
+            <Button Content="Start"  Command="{Binding StartUploadCommand}" Margin="0,0,8,0"/>
+            <Button Content="Pause"  Command="{Binding PauseAllCommand}"  Margin="0,0,8,0"/>
+            <Button Content="Resume" Command="{Binding ResumeAllCommand}" Margin="0,0,8,0"/>
+            <Button Content="Cancel" Command="{Binding CancelAllCommand}" />
+
+            <TextBlock Text="  |  Session:" VerticalAlignment="Center" Margin="12,0,4,0"/>
+            <TextBlock Text="{Binding SessionId, FallbackValue=—}" FontWeight="Bold" VerticalAlignment="Center"/>
         </StackPanel>
 
-        <TextBlock Text="{Binding SessionStatus}"
-           Margin="0,4,0,8"
-           FontStyle="Italic"
-           Foreground="DarkBlue"
-           DockPanel.Dock="Top"/>
-        
-        <TextBlock Text="{Binding SessionId, StringFormat=Session: {0}}"
-                   Margin="0,0,0,8"
-                   Foreground="DarkGreen"
-                   DockPanel.Dock="Top"/>
-        
-        <ListView ItemsSource="{Binding Files}" 
-          DockPanel.Dock="Top" 
-          Margin="0,0,0,8"
-          VerticalAlignment="Stretch"
-          ScrollViewer.VerticalScrollBarVisibility="Auto"
-          MaxHeight="250">
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="#" Width="40" DisplayMemberBinding="{Binding Index}" />
-                    <GridViewColumn Header="File" Width="200" DisplayMemberBinding="{Binding FileName}" />
-                    <GridViewColumn Header="Size" Width="100" DisplayMemberBinding="{Binding SizeHuman}" />
-                    <GridViewColumn Header="Path" Width="220" DisplayMemberBinding="{Binding FilePath}" />
-
-                    <!-- Progress Column -->
-                    <GridViewColumn Header="Progress" Width="150">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <ProgressBar Minimum="0" Maximum="100"
-                                             Value="{Binding Progress}" Height="18"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-
-                    <!-- Status Column -->
-                    <GridViewColumn Header="Status" Width="100" DisplayMemberBinding="{Binding Status}" />
-
-                    <GridViewColumn Header="Error" Width="180" DisplayMemberBinding="{Binding ErrorMessage}" />
-                    <!-- Action Column -->
-                    <GridViewColumn Header="Action" Width="120">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <Button Content="Delete" Width="80"
-        Command="{Binding DataContext.DeleteFileCommand,
-                          RelativeSource={RelativeSource AncestorType=ListView}}"
-        CommandParameter="{Binding}"/>
-
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                </GridView>
-            </ListView.View>
-        </ListView>
-
-        <!-- ✅ Overall progress docked to bottom, INSIDE the DockPanel -->
-        <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
-            <TextBlock Text="{Binding OverallProgressText}"
-               Margin="0,0,0,4" FontWeight="Bold"/>
-            <ProgressBar Minimum="0" Maximum="100"
-                 Value="{Binding OverallProgress}"
-                 Height="20"/>
+        <!-- Overall status/progress -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,0,10,10" VerticalAlignment="Center">
+            <TextBlock Text="{Binding SessionStatus, FallbackValue=Ready}" />
+            <TextBlock Text="  |  " />
+            <TextBlock Text="{Binding OverallProgressText, FallbackValue=Overall: 0% (0 files)}" />
+            <ProgressBar Minimum="0" Maximum="100" Height="16" Width="220" Margin="12,0,0,0"
+                         Value="{Binding OverallProgress, FallbackValue=0}" />
         </StackPanel>
+
+        <!-- Files table -->
+        <DataGrid ItemsSource="{Binding Files}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  IsReadOnly="True"
+                  Margin="10"
+                  EnableRowVirtualization="True"
+                  HeadersVisibility="Column">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="#" Binding="{Binding Index, TargetNullValue=0}" Width="50" />
+
+                <DataGridTextColumn Header="File Name"
+                                    Binding="{Binding FileName, TargetNullValue=Unknown, FallbackValue=Unknown}"
+                                    Width="200" />
+
+                <DataGridTextColumn Header="Path"
+                                    Binding="{Binding FullPath, TargetNullValue=—, FallbackValue=—}"
+                                    Width="*" />
+
+                <!-- Show raw bytes safely; no converter required -->
+                <DataGridTextColumn Header="Size"
+                                    Binding="{Binding SizeBytes, StringFormat={}{0:N0} B, TargetNullValue=0, FallbackValue=0}"
+                                    Width="140" />
+
+                <DataGridTextColumn Header="Status"
+                                    Binding="{Binding Status, TargetNullValue=Ready, FallbackValue=Ready}"
+                                    Width="130" />
+
+                <!-- Progress as % text -->
+                <DataGridTextColumn Header="Progress"
+                                    Binding="{Binding Progress, StringFormat={}{0}%, TargetNullValue=0, FallbackValue=0}"
+                                    Width="90" />
+
+                <!-- Progress bar -->
+                <DataGridTemplateColumn Header="Progress Bar" Width="160">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ProgressBar Minimum="0" Maximum="100" Height="16"
+                                         Value="{Binding Progress, TargetNullValue=0, FallbackValue=0}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
 
     </DockPanel>
 </Window>
