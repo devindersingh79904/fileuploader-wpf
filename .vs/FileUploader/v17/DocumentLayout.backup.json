@@ -1,0 +1,278 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\devin\\source\\repos\\FileUploader\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\viewmodels\\mainviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\viewmodels\\mainviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\net\\istorageuploader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\net\\istorageuploader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\views\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\views\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\net\\fileuploadapi.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\net\\fileuploadapi.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\viewmodels\\commands\\startuploadcommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\viewmodels\\commands\\startuploadcommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\services\\uploadmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\services\\uploadmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\net\\ifileuploadapi.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\net\\ifileuploadapi.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\dtos\\request\\startsessionrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\dtos\\request\\startsessionrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\config\\appconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\config\\appconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\net\\storageuploader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\net\\storageuploader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\viewmodels\\commands\\selectfilescommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\viewmodels\\commands\\selectfilescommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\models\\filerow.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\models\\filerow.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|c:\\users\\devin\\source\\repos\\fileuploader\\fileuploader\\viewmodels\\commands\\pauseallcommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9EEF46AC-FFBD-41CD-A90D-41694C274656}|FileUploader\\FileUploader.csproj|solutionrelative:fileuploader\\viewmodels\\commands\\pauseallcommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "IFileUploadApi.cs",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Net\\IFileUploadApi.cs",
+              "RelativeDocumentMoniker": "FileUploader\\Net\\IFileUploadApi.cs",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Net\\IFileUploadApi.cs",
+              "RelativeToolTip": "FileUploader\\Net\\IFileUploadApi.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAwAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T06:42:45.436Z",
+              "IsPinned": true,
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "MainViewModel.cs",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\ViewModels\\MainViewModel.cs",
+              "RelativeDocumentMoniker": "FileUploader\\ViewModels\\MainViewModel.cs",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\ViewModels\\MainViewModel.cs",
+              "RelativeToolTip": "FileUploader\\ViewModels\\MainViewModel.cs",
+              "ViewState": "AgIAAKgAAAAAAAAAAAAAABIAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T13:05:10.576Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "FileUploadApi.cs",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Net\\FileUploadApi.cs",
+              "RelativeDocumentMoniker": "FileUploader\\Net\\FileUploadApi.cs",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Net\\FileUploadApi.cs",
+              "RelativeToolTip": "FileUploader\\Net\\FileUploadApi.cs",
+              "ViewState": "AgIAADQAAAAAAAAAAAAAAEYAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T06:43:13.507Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "MainWindow.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Views\\MainWindow.xaml.cs",
+              "RelativeDocumentMoniker": "FileUploader\\Views\\MainWindow.xaml.cs",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Views\\MainWindow.xaml.cs",
+              "RelativeToolTip": "FileUploader\\Views\\MainWindow.xaml.cs",
+              "ViewState": "AgIAABgAAAAAAAAAAAAAACQAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T11:14:26.271Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "IStorageUploader.cs",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Net\\IStorageUploader.cs",
+              "RelativeDocumentMoniker": "FileUploader\\Net\\IStorageUploader.cs",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Net\\IStorageUploader.cs",
+              "RelativeToolTip": "FileUploader\\Net\\IStorageUploader.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T06:43:27.25Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "StartUploadCommand.cs",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\ViewModels\\Commands\\StartUploadCommand.cs",
+              "RelativeDocumentMoniker": "FileUploader\\ViewModels\\Commands\\StartUploadCommand.cs",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\ViewModels\\Commands\\StartUploadCommand.cs",
+              "RelativeToolTip": "FileUploader\\ViewModels\\Commands\\StartUploadCommand.cs",
+              "ViewState": "AgIAAKQAAAAAAAAAAAAgwMsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T10:42:56.284Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "UploadManager.cs",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Services\\UploadManager.cs",
+              "RelativeDocumentMoniker": "FileUploader\\Services\\UploadManager.cs",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Services\\UploadManager.cs",
+              "RelativeToolTip": "FileUploader\\Services\\UploadManager.cs",
+              "ViewState": "AgIAAGMAAAAAAAAAAAAjwIAAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T06:44:23.254Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "StartSessionRequest.cs",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Dtos\\Request\\StartSessionRequest.cs",
+              "RelativeDocumentMoniker": "FileUploader\\Dtos\\Request\\StartSessionRequest.cs",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Dtos\\Request\\StartSessionRequest.cs",
+              "RelativeToolTip": "FileUploader\\Dtos\\Request\\StartSessionRequest.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T11:02:06.033Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "AppConfig.cs",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Config\\AppConfig.cs",
+              "RelativeDocumentMoniker": "FileUploader\\Config\\AppConfig.cs",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Config\\AppConfig.cs",
+              "RelativeToolTip": "FileUploader\\Config\\AppConfig.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T10:42:19.489Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "App.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\App.xaml.cs",
+              "RelativeDocumentMoniker": "FileUploader\\App.xaml.cs",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\App.xaml.cs",
+              "RelativeToolTip": "FileUploader\\App.xaml.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T11:15:53.644Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "App.xaml",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\App.xaml",
+              "RelativeDocumentMoniker": "FileUploader\\App.xaml",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\App.xaml",
+              "RelativeToolTip": "FileUploader\\App.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2025-08-31T11:15:54.826Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "StorageUploader.cs",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Net\\StorageUploader.cs",
+              "RelativeDocumentMoniker": "FileUploader\\Net\\StorageUploader.cs",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Net\\StorageUploader.cs",
+              "RelativeToolTip": "FileUploader\\Net\\StorageUploader.cs",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAwwCsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T06:43:38.573Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "FileRow.cs",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Models\\FileRow.cs",
+              "RelativeDocumentMoniker": "FileUploader\\Models\\FileRow.cs",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\Models\\FileRow.cs",
+              "RelativeToolTip": "FileUploader\\Models\\FileRow.cs",
+              "ViewState": "AgIAADoAAAAAAAAAAAAwwF4AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T06:52:32.313Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "SelectFilesCommand.cs",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\ViewModels\\Commands\\SelectFilesCommand.cs",
+              "RelativeDocumentMoniker": "FileUploader\\ViewModels\\Commands\\SelectFilesCommand.cs",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\ViewModels\\Commands\\SelectFilesCommand.cs",
+              "RelativeToolTip": "FileUploader\\ViewModels\\Commands\\SelectFilesCommand.cs",
+              "ViewState": "AgIAAC8AAAAAAAAAAAAwwFMAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T06:52:09.882Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "PauseAllCommand.cs",
+              "DocumentMoniker": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\ViewModels\\Commands\\PauseAllCommand.cs",
+              "RelativeDocumentMoniker": "FileUploader\\ViewModels\\Commands\\PauseAllCommand.cs",
+              "ToolTip": "C:\\Users\\devin\\source\\repos\\FileUploader\\FileUploader\\ViewModels\\Commands\\PauseAllCommand.cs",
+              "RelativeToolTip": "FileUploader\\ViewModels\\Commands\\PauseAllCommand.cs",
+              "ViewState": "AgIAAAgAAAAAAAAAAAAwwCwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-31T06:52:15.111Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
