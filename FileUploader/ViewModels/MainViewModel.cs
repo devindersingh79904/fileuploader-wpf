@@ -37,26 +37,24 @@ namespace FileUploader.ViewModels
             set { if (_sessionStatus != value) { _sessionStatus = value; OnPropertyChanged(nameof(SessionStatus)); } }
         }
 
-        private double _overallProgress = 0; // 0..100
+        private double _overallProgress;
         public double OverallProgress
         {
             get => _overallProgress;
             set { if (_overallProgress != value) { _overallProgress = value; OnPropertyChanged(nameof(OverallProgress)); } }
         }
 
-        private string _overallProgressText = "Overall: 0% (0 of 0)";
+        private string _overallProgressText = "Overall: 0 / 0 files";
         public string OverallProgressText
         {
             get => _overallProgressText;
             set { if (_overallProgressText != value) { _overallProgressText = value; OnPropertyChanged(nameof(OverallProgressText)); } }
         }
 
-        // Orchestration
         private readonly QueuedUploadService _queued;
         private readonly IUploadManager _uploadManager;
         private readonly string _userId = "c001";
 
-        // Tracks which file was actively uploading when pause was hit
         private string _activeFilePath;
 
         public MainViewModel()
@@ -75,56 +73,43 @@ namespace FileUploader.ViewModels
             _uploadManager = new UploadManager(api, storage);
             _queued = new QueuedUploadService(_uploadManager);
 
-            // Queue events -> update rows + track active file + notify command states
             _queued.OnQueued += fp => { UpdateRow(fp, "Queued", 0); NotifyCommandStates(); };
             _queued.OnStarted += fp => { _activeFilePath = fp; UpdateRow(fp, "Uploading", 0); NotifyCommandStates(); };
-            _queued.OnProgress += (fp, p) => { UpdateRow(fp, "Uploading", p);    /* no spam requery */ };
+            _queued.OnProgress += (fp, p) => { UpdateRow(fp, "Uploading", p); };
             _queued.OnCompleted += fp => { if (_activeFilePath == fp) _activeFilePath = null; UpdateRow(fp, "Completed", 100); NotifyCommandStates(); };
             _queued.OnFailed += (fp, ex) => { if (_activeFilePath == fp) _activeFilePath = null; UpdateRow(fp, $"Failed: {ex.Message}", 0); NotifyCommandStates(); };
 
             Files.CollectionChanged += OnFilesCollectionChanged;
         }
 
-        // Called by StartUploadCommand
         public void StartUploads()
         {
             foreach (var file in Files)
-            {
                 _ = _queued.EnqueueFileAsync(_userId, file.FullPath, CancellationToken.None);
-            }
+
             NotifyCommandStates();
         }
 
         public void PauseAllUploads()
         {
-            _queued.PauseAll();   // freezes queue + cancels in-flight chunk
-            // UI rows changed by PauseAllCommand; just requery commands here
+            _queued.PauseAll();
             NotifyCommandStates();
         }
 
         public void ResumeAllUploads()
         {
-            // 1) Unfreeze queue so any pre-existing queued jobs continue in original order
             _queued.ResumeAll();
 
-            // 2) Flip UI from Paused -> Queued (UI consistency only; do NOT enqueue all)
             foreach (var row in Files)
-            {
                 if (string.Equals(row.Status, "Paused", StringComparison.OrdinalIgnoreCase))
                     row.Status = "Queued";
-            }
 
-            // 3) Only re-enqueue the file that was actively uploading when pause happened.
-            //    (All other paused files were already in the queue; re-enqueuing causes duplicates.)
             if (!string.IsNullOrWhiteSpace(_activeFilePath))
             {
                 var row = FindRow(_activeFilePath);
                 if (row != null)
-                {
-                    // Keep UI as Queued; the queue will raise OnStarted when it actually begins
                     _ = _queued.EnqueueFileAsync(_userId, row.FullPath, CancellationToken.None);
-                }
-                // Clear the marker; next OnStarted will set it again
+
                 _activeFilePath = null;
             }
 
@@ -158,7 +143,7 @@ namespace FileUploader.ViewModels
         private void OnFilesCollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             NotifyCommandStates();
-            OverallProgressText = $"Overall: {OverallProgress:0}% ({Files.Count} file(s))";
+            RecalculateOverallProgress();
         }
 
         public void AddFiles(string[] filePaths)
@@ -168,6 +153,7 @@ namespace FileUploader.ViewModels
                 Files.Add(FileRow.FromPath(filePaths[i], start + i));
 
             NotifyCommandStates();
+            RecalculateOverallProgress();
         }
 
         // ---- Helpers ----
@@ -179,6 +165,8 @@ namespace FileUploader.ViewModels
                 row.Status = status;
                 row.Progress = percent;
             }
+
+            RecalculateOverallProgress();
         }
 
         private FileRow FindRow(string filePath)
@@ -187,6 +175,27 @@ namespace FileUploader.ViewModels
                 if (string.Equals(f.FullPath, filePath, StringComparison.OrdinalIgnoreCase))
                     return f;
             return null;
+        }
+
+        private void RecalculateOverallProgress()
+        {
+            if (Files == null || Files.Count == 0)
+            {
+                OverallProgress = 0;
+                OverallProgressText = "Overall: 0 / 0 files";
+                return;
+            }
+
+            int total = Files.Count;
+            int completed = 0;
+            foreach (var f in Files)
+            {
+                if (string.Equals(f.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+                    completed++;
+            }
+
+            OverallProgress = (double)completed / total * 100.0;
+            OverallProgressText = $"Overall: {completed} / {total} files uploaded";
         }
 
         public void NotifyCommandStates()

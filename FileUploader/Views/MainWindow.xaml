@@ -13,13 +13,10 @@
         <!-- Top controls -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10" VerticalAlignment="Center">
             <Button Content="Select Files" Command="{Binding SelectFilesCommand}" Margin="0,0,8,0"/>
-            <Button Content="Delete Selected" Command="{Binding DeleteFileCommand}" Margin="0,0,16,0"/>
-
             <Button Content="Start"  Command="{Binding StartUploadCommand}" Margin="0,0,8,0"/>
             <Button Content="Pause"  Command="{Binding PauseAllCommand}"  Margin="0,0,8,0"/>
             <Button Content="Resume" Command="{Binding ResumeAllCommand}" Margin="0,0,8,0"/>
-            <Button Content="Cancel" Command="{Binding CancelAllCommand}" />
-
+           
             <TextBlock Text="  |  Session:" VerticalAlignment="Center" Margin="12,0,4,0"/>
             <TextBlock Text="{Binding SessionId, FallbackValue=—}" FontWeight="Bold" VerticalAlignment="Center"/>
         </StackPanel>
