@@ -23,11 +23,14 @@
 
         <!-- Overall status/progress -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,0,10,10" VerticalAlignment="Center">
-            <TextBlock Text="{Binding SessionStatus, FallbackValue=Ready}" />
-            <TextBlock Text="  |  " />
-            <TextBlock Text="{Binding OverallProgressText, FallbackValue=Overall: 0% (0 files)}" />
-            <ProgressBar Minimum="0" Maximum="100" Height="16" Width="220" Margin="12,0,0,0"
-                         Value="{Binding OverallProgress, FallbackValue=0}" />
+            <TextBlock Text="{Binding SessionStatus, FallbackValue=Ready}"  Foreground="{Binding SessionStatusBrush}" />
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,0,10,10" VerticalAlignment="Center">
+            <TextBlock Text="Overall Progress:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+            <ProgressBar Minimum="0" Maximum="100" Height="16" Width="300"
+                         Value="{Binding OverallProgress, TargetNullValue=0, FallbackValue=0}"/>
+            <TextBlock Text="{Binding OverallProgress, StringFormat={}{0}%, TargetNullValue=0, FallbackValue=0}"
+                       VerticalAlignment="Center" Margin="8,0,0,0"/>
         </StackPanel>
 
         <!-- Files table -->
