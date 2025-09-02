@@ -3,3 +3,10 @@ bin/
 obj/
 *.user
 *.suo
+
+
+*.vsidx
+*.suo
+*.user
+*.userosscache
+*.sln.docstates

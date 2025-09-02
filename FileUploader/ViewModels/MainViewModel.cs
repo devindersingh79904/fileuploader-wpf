@@ -1,4 +1,5 @@
-﻿using FileUploader.Dtos.Request;
+﻿using FileUploader.Dtos;
+using FileUploader.Dtos.Request;
 using FileUploader.Dtos.Responses;
 using FileUploader.Models;
 using FileUploader.ViewModels.Commands;
@@ -7,6 +8,8 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;              // Dispatcher
+using System.Windows.Media;        // Brushes
 
 namespace FileUploader.ViewModels
 {
@@ -16,6 +19,14 @@ namespace FileUploader.ViewModels
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string propertyName)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+        // ===== Simple UI dispatcher helper =====
+        private static void RunOnUi(Action action)
+        {
+            var d = Application.Current?.Dispatcher;
+            if (d == null || d.CheckAccess()) action();
+            else d.Invoke(action);
+        }
 
         // ===== Data =====
         public ObservableCollection<FileRow> Files { get; }
@@ -29,8 +40,6 @@ namespace FileUploader.ViewModels
 
         private bool _sessionCreated;
         private bool _sessionCompleted;
-
-        private int _expectedFileCount = 0; // NEW: track how many files should complete
 
         private string _sessionId = string.Empty;
         public string SessionId
@@ -60,6 +69,14 @@ namespace FileUploader.ViewModels
             set { if (_overallProgressText != value) { _overallProgressText = value; OnPropertyChanged(nameof(OverallProgressText)); } }
         }
 
+        // Optional: if you show colored status text in the view
+        private Brush _sessionStatusBrush = Brushes.Black;
+        public Brush SessionStatusBrush
+        {
+            get => _sessionStatusBrush;
+            set { if (_sessionStatusBrush != value) { _sessionStatusBrush = value; OnPropertyChanged(nameof(SessionStatusBrush)); } }
+        }
+
         // ===== Services / state =====
         private readonly QueuedUploadService _queued;
         private readonly IUploadManager _uploadManager;
@@ -86,21 +103,55 @@ namespace FileUploader.ViewModels
             _queued = new QueuedUploadService(_uploadManager);
 
             // Queue -> UI + command state
-            _queued.OnQueued += fp => { UpdateRow(fp, "Queued", 0); NotifyCommandStates(); };
-            _queued.OnStarted += fp => { ActiveFilePath = fp; UpdateRow(fp, "Uploading", 0); NotifyCommandStates(); };
-            _queued.OnProgress += (fp, p) => { UpdateRow(fp, "Uploading", p); };
+            _queued.OnQueued += fp =>
+            {
+                RunOnUi(() =>
+                {
+                    var row = FindRow(fp);
+                    var keepPercent = row?.Progress ?? 0;   // keep previous percent
+                    UpdateRow(fp, "Queued", keepPercent);
+                    NotifyCommandStates();
+                });
+            };
+
+            _queued.OnStarted += fp =>
+            {
+                RunOnUi(() =>
+                {
+                    ActiveFilePath = fp;
+                    var row = FindRow(fp);
+                    var keepPercent = row?.Progress ?? 0;   // keep previous percent
+                    UpdateRow(fp, "Uploading", keepPercent);
+                    NotifyCommandStates();
+                });
+            };
+
+            _queued.OnProgress += (fp, p) =>
+            {
+                RunOnUi(() => { UpdateRow(fp, "Uploading", p); });
+            };
+
             _queued.OnCompleted += fp =>
             {
-                if (ActiveFilePath == fp) ActiveFilePath = null;
-                UpdateRow(fp, "Completed", 100);
-                NotifyCommandStates();
-                TryCompleteSessionIfDone();
+                RunOnUi(() =>
+                {
+                    if (ActiveFilePath == fp) ActiveFilePath = null;
+                    UpdateRow(fp, "Completed", 100);
+                    NotifyCommandStates();
+                    TryCompleteSessionIfDone();
+                });
             };
+
             _queued.OnFailed += (fp, ex) =>
             {
-                if (ActiveFilePath == fp) ActiveFilePath = null;
-                UpdateRow(fp, $"Failed: {ex.Message}", 0);
-                NotifyCommandStates();
+                RunOnUi(() =>
+                {
+                    if (ActiveFilePath == fp) ActiveFilePath = null;
+                    UpdateRow(fp, $"Failed: {ex.Message}", 0);
+                    SessionStatus = $"Error: {ex.Message}";
+                    SessionStatusBrush = Brushes.Red;
+                    NotifyCommandStates();
+                });
             };
 
             Files.CollectionChanged += OnFilesCollectionChanged;
@@ -109,10 +160,14 @@ namespace FileUploader.ViewModels
         // ===== Public ops called by commands =====
         public void StartUploads()
         {
+            // Let queue events drive the UI. Only enqueue items not completed or already uploading.
             foreach (var f in Files)
             {
-                if (!"Completed".Equals(f.Status, StringComparison.OrdinalIgnoreCase))
+                if (!"Completed".Equals(f.Status, StringComparison.OrdinalIgnoreCase) &&
+                    !"Uploading".Equals(f.Status, StringComparison.OrdinalIgnoreCase))
+                {
                     _ = _queued.EnqueueFileAsync(_userId, f.FullPath, CancellationToken.None);
+                }
             }
 
             _sessionCompleted = false;
@@ -123,75 +178,145 @@ namespace FileUploader.ViewModels
         {
             if (_sessionCreated) return;
             _sessionCreated = true;
-            try
+
+            RunOnUi(() =>
             {
                 SessionStatus = "Creating session...";
+                SessionStatusBrush = Brushes.Black;
+            });
+
+            try
+            {
                 var resp = await _api.StartSessionAsync(new StartSessionRequest { UserId = _userId }, CancellationToken.None);
-                SessionId = resp.SessionId;
-                SessionStatus = "Session created: " + SessionId;
+                RunOnUi(() =>
+                {
+                    SessionId = resp.SessionId;
+                    SessionStatus = "Session created: " + SessionId;  // keep this line
+                    SessionStatusBrush = Brushes.Green;
+                });
             }
-            catch (Exception ex) { SessionStatus = "Failed: " + ex.Message; }
+            catch (Exception ex)
+            {
+                RunOnUi(() =>
+                {
+                    SessionStatus = "Failed: " + ex.Message;
+                    SessionStatusBrush = Brushes.Red;
+                });
+            }
         }
 
         public async void PauseAllUploads()
         {
             _queued.PauseAll();
+
             if (!string.IsNullOrWhiteSpace(SessionId))
             {
-                try { await _api.PauseSessionAsync(SessionId, CancellationToken.None); }
-                catch (Exception ex) { SessionStatus = "Server pause failed: " + ex.Message; }
+                try
+                {
+                    await _api.PauseSessionAsync(SessionId, CancellationToken.None);
+                    RunOnUi(() =>
+                    {
+                        SessionStatus = "All uploads paused.";
+                        SessionStatusBrush = Brushes.Black;
+                    });
+                }
+                catch (Exception ex)
+                {
+                    RunOnUi(() =>
+                    {
+                        SessionStatus = "Server pause failed: " + ex.Message;
+                        SessionStatusBrush = Brushes.Red;
+                    });
+                }
             }
-            NotifyCommandStates();
+
+            // Mark UI rows that are currently queued/uploading as Paused (keep %)
+            RunOnUi(() =>
+            {
+                foreach (FileRow row in Files)
+                {
+                    if (row.Status.Equals("Queued", StringComparison.OrdinalIgnoreCase) ||
+                        row.Status.Equals("Uploading", StringComparison.OrdinalIgnoreCase))
+                    {
+                        row.Status = "Paused";   // do NOT reset row.Progress
+                    }
+                }
+                NotifyCommandStates();
+            });
         }
 
         public async void ResumeAllUploads()
         {
-            foreach (var row in Files)
+            // Flip only Paused -> Queued in UI (progress stays as-is)
+            RunOnUi(() =>
             {
-                if ("Paused".Equals(row.Status, StringComparison.OrdinalIgnoreCase))
-                    row.Status = "Queued";
-            }
+                foreach (var row in Files)
+                {
+                    if ("Paused".Equals(row.Status, StringComparison.OrdinalIgnoreCase))
+                        row.Status = "Queued";
+                }
+            });
 
             if (!string.IsNullOrWhiteSpace(SessionId))
             {
-                try { await _api.ResumeSessionAsync(SessionId, CancellationToken.None); }
-                catch (Exception ex) { SessionStatus = "Server resume failed: " + ex.Message; }
+                try
+                {
+                    await _api.ResumeSessionAsync(SessionId, CancellationToken.None);
+                    RunOnUi(() =>
+                    {
+                        SessionStatus = "Resumed uploads.";
+                        SessionStatusBrush = Brushes.Black;
+                    });
+                }
+                catch (Exception ex)
+                {
+                    RunOnUi(() =>
+                    {
+                        SessionStatus = "Server resume failed: " + ex.Message;
+                        SessionStatusBrush = Brushes.Red;
+                    });
+                }
             }
 
             _queued.ResumeAll();
-            SessionStatus = "Resumed uploads.";
-            NotifyCommandStates();
+            RunOnUi(NotifyCommandStates);
         }
 
         // ===== Collection / UI helpers =====
         private void OnFilesCollectionChanged(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            NotifyCommandStates();
-            RecalcOverallFilesText();
+            RunOnUi(() =>
+            {
+                NotifyCommandStates();
+                RecalcOverallFilesText();
+            });
         }
 
         public void AddFiles(string[] filePaths)
         {
-            int start = Files.Count + 1;
-            for (int i = 0; i < filePaths.Length; i++)
-                Files.Add(FileRow.FromPath(filePaths[i], start + i));
+            RunOnUi(() =>
+            {
+                int start = Files.Count + 1;
+                for (int i = 0; i < filePaths.Length; i++)
+                    Files.Add(FileRow.FromPath(filePaths[i], start + i));
 
-            // Track how many files are expected for this session
-            _expectedFileCount = Files.Count;
-
-            NotifyCommandStates();
-            RecalcOverallFilesText();
+                NotifyCommandStates();
+                RecalcOverallFilesText();
+            });
         }
 
         private void UpdateRow(string filePath, string status, int percent)
         {
-            var row = FindRow(filePath);
-            if (row != null)
+            RunOnUi(() =>
             {
-                row.Status = status;
-                row.Progress = percent;
-            }
-            RecalcOverallFilesText();
+                var row = FindRow(filePath);
+                if (row != null)
+                {
+                    row.Status = status;
+                    row.Progress = percent;
+                }
+                RecalcOverallFilesText();
+            });
         }
 
         public FileRow? FindRow(string filePath)
@@ -221,22 +346,33 @@ namespace FileUploader.ViewModels
             if (_sessionCompleted) return;
             if (string.IsNullOrWhiteSpace(SessionId)) return;
 
+            int total = Files?.Count ?? 0;
+            if (total == 0) return;
+
             int completed = 0;
             foreach (var f in Files)
                 if ("Completed".Equals(f.Status, StringComparison.OrdinalIgnoreCase))
                     completed++;
 
-            if (completed == _expectedFileCount && _expectedFileCount > 0)
+            if (completed == total)
             {
                 try
                 {
                     await _api.CompleteSessionAsync(SessionId, CancellationToken.None);
                     _sessionCompleted = true;
-                    SessionStatus = "Session completed on server.";
+                    RunOnUi(() =>
+                    {
+                        SessionStatus = "Session completed on server.";
+                        SessionStatusBrush = Brushes.Green;
+                    });
                 }
                 catch (Exception ex)
                 {
-                    SessionStatus = "Server completion failed: " + ex.Message;
+                    RunOnUi(() =>
+                    {
+                        SessionStatus = "Server completion failed: " + ex.Message;
+                        SessionStatusBrush = Brushes.Red;
+                    });
                 }
             }
         }

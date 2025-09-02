@@ -3,75 +3,135 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
-public sealed class QueuedUploadService : IDisposable
+public sealed class QueuedUploadService
 {
-    private readonly IUploadManager _manager;
-    private readonly UploadQueue _queue = new();
+    private readonly IUploadManager _uploadManager;
 
+    private readonly ConcurrentQueue<string> _queue = new();
+
+    private Task? _pumpTask;
+    private volatile bool _paused;
+    private volatile bool _stopping;
+    private CancellationTokenSource? _inflightCts;
+    private string _lastUserId = "c001";
+
+    // resume the file that was interrupted by Pause first
+    private string? _resumeFirst;
+
+    // UI hooks
     public event Action<string>? OnQueued;
     public event Action<string>? OnStarted;
     public event Action<string, int>? OnProgress;
     public event Action<string>? OnCompleted;
     public event Action<string, Exception>? OnFailed;
+    public event Action<string>? OnCanceled;
 
-    public event Action<string>? OnCanceled; // optional for UI
-
-    private readonly ConcurrentDictionary<string, string> _userByFile = new();
-    private readonly ConcurrentDictionary<string, byte> _pausedFiles = new();
-
-    public QueuedUploadService(IUploadManager manager)
+    public QueuedUploadService(IUploadManager uploadManager)
     {
-        _manager = manager ?? throw new ArgumentNullException(nameof(manager));
-
-        _queue.OnQueued += fp => OnQueued?.Invoke(fp);
-        _queue.OnStarted += fp => OnStarted?.Invoke(fp);
-        _queue.OnCompleted += fp => OnCompleted?.Invoke(fp);
-        _queue.OnFailed += (fp, ex) => OnFailed?.Invoke(fp, ex);
-        _queue.OnCanceled += fp =>
-        {
-            _pausedFiles[fp] = 1;
-            OnCanceled?.Invoke(fp);
-        };
+        _uploadManager = uploadManager ?? throw new ArgumentNullException(nameof(uploadManager));
     }
 
     public Task EnqueueFileAsync(string userId, string filePath, CancellationToken ct = default)
     {
-        _userByFile[filePath] = userId;
+        _lastUserId = string.IsNullOrWhiteSpace(userId) ? _lastUserId : userId;
 
-        return _queue.EnqueueAsync(filePath, async token =>
-        {
-            await _manager.StartUploadAsync(
-                userId,
-                new[] { filePath },
-                (fp, p) => OnProgress?.Invoke(fp, p),
-                token
-            );
-        });
+        // Fire Queued BEFORE enqueue to avoid a race that could overwrite "Uploading".
+        OnQueued?.Invoke(filePath);
+
+        _queue.Enqueue(filePath);
+
+        EnsurePump();  // make sure worker is running
+        return Task.CompletedTask;
     }
 
     public void PauseAll()
     {
-        _queue.Pause();   // stop starting new jobs
-        _manager.Pause(); // cancel current file between parts
+        _paused = true;
+
+        try { _uploadManager.Pause(); } catch { /* ignore */ }
+
+        try { _inflightCts?.Cancel(); } catch { /* ignore */ }
     }
 
     public void ResumeAll()
     {
-        _queue.Resume();
+        _paused = false;
+        _stopping = false;
+        EnsurePump();  // kick worker again
+    }
 
-        // re-enqueue any files canceled mid-flight
-        foreach (var kv in _pausedFiles)
+    public void CancelAll()
+    {
+        _stopping = true;
+        _paused = false;
+
+        while (_queue.TryDequeue(out _)) { /* drop everything */ }
+
+        try { _inflightCts?.Cancel(); } catch { /* ignore */ }
+    }
+
+    // ---------------- worker ----------------
+
+    private void EnsurePump()
+    {
+        if (_pumpTask == null || _pumpTask.IsCompleted)
+            _pumpTask = Task.Run(ProcessQueueAsync);
+    }
+
+    private async Task ProcessQueueAsync()
+    {
+        while (!_stopping)
         {
-            var fp = kv.Key;
-            if (_pausedFiles.TryRemove(fp, out _))
+            if (_paused)
             {
-                if (_userByFile.TryGetValue(fp, out var user))
+                await Task.Delay(120);
+                continue;
+            }
+
+            string? filePath = null;
+
+            if (_resumeFirst != null)
+            {
+                filePath = _resumeFirst;
+                _resumeFirst = null;
+            }
+            else
+            {
+                if (!_queue.TryDequeue(out filePath))
                 {
-                    _ = EnqueueFileAsync(user, fp, CancellationToken.None);
+                    // nothing left; exit until next Enqueue/Resume
+                    return;
                 }
+            }
+
+            OnStarted?.Invoke(filePath);
+
+            using var cts = new CancellationTokenSource();
+            _inflightCts = cts;
+
+            try
+            {
+                await _uploadManager.StartUploadAsync(
+                    _lastUserId,
+                    new[] { filePath },
+                    (fp, p) => OnProgress?.Invoke(fp, p),
+                    cts.Token);
+
+                OnCompleted?.Invoke(filePath);
+            }
+            catch (OperationCanceledException)
+            {
+                _resumeFirst = filePath;   // resume this file first
+                OnCanceled?.Invoke(filePath);
+            }
+            catch (Exception ex)
+            {
+                OnFailed?.Invoke(filePath, ex);
+            }
+            finally
+            {
+                _inflightCts = null;
             }
         }
     }
-
-    public void Dispose() => _queue.Dispose();
 }
