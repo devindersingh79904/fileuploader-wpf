@@ -1,32 +1,15 @@
-﻿using FileUploader.Models;
-using FileUploader.ViewModels;
+﻿using FileUploader.ViewModels;
 using System;
-using System.Threading;
-using System.Windows;
 using System.Windows.Input;
 
 public class StartUploadCommand : ICommand
 {
     private readonly MainViewModel _vm;
-
-    private readonly IFileUploadApi _api;
-    private readonly IStorageUploader _uploader;
-    private readonly IUploadManager _manager;
-
-    private CancellationTokenSource _cts;
-
-    // 🔑 New flag to disable Start while running
-    private bool _isRunning = false;
+    private bool _isRunning;
 
     public StartUploadCommand(MainViewModel vm)
     {
         _vm = vm ?? throw new ArgumentNullException(nameof(vm));
-
-        _api = new FileUploadApi();
-        _uploader = new StorageUploader();
-        _manager = new UploadManager(_api, _uploader);
-
-        _cts = new CancellationTokenSource();
     }
 
     public event EventHandler? CanExecuteChanged;
@@ -34,36 +17,32 @@ public class StartUploadCommand : ICommand
 
     public bool CanExecute(object? parameter)
     {
-        if (_isRunning) return false;  // ✅ disable once started
+        if (_isRunning) return false;
         if (_vm.Files == null || _vm.Files.Count == 0) return false;
 
-        foreach (var row in _vm.Files)
-        {
-            if (!string.Equals(row.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+        // enable only if at least one is not completed
+        foreach (var r in _vm.Files)
+            if (!"Completed".Equals(r.Status, StringComparison.OrdinalIgnoreCase))
                 return true;
-        }
+
         return false;
     }
 
-    public async void Execute(object? parameter)
+    public void Execute(object? parameter)
     {
-        if (_vm.Files == null || _vm.Files.Count == 0)
-        {
-            MessageBox.Show("Please add at least one file to start upload.", "Info",
-                MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
+        if (_vm.Files == null || _vm.Files.Count == 0) return;
 
         _isRunning = true;
-        RaiseCanExecuteChanged(); // disable button immediately
+        RaiseCanExecuteChanged(); // disable Start immediately
 
-        foreach (var row in _vm.Files)
+        // reset non-completed rows to Queued
+        foreach (var r in _vm.Files)
         {
-            if (!string.Equals(row.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+            if (!"Completed".Equals(r.Status, StringComparison.OrdinalIgnoreCase))
             {
-                row.Status = "Queued";
-                row.Progress = 0;
-                row.ErrorMessage = string.Empty;
+                r.Status = "Queued";
+                r.Progress = 0;
+                r.ErrorMessage = string.Empty;
             }
         }
 
@@ -71,68 +50,9 @@ public class StartUploadCommand : ICommand
         _vm.OverallProgress = 0;
         _vm.OverallProgressText = $"Overall: 0 / {_vm.Files.Count} files uploaded";
 
-        try
-        {
-            string userId = "c001";
-            string[] paths = new string[_vm.Files.Count];
-            for (int i = 0; i < _vm.Files.Count; i++)
-                paths[i] = _vm.Files[i].FullPath;
+        // IMPORTANT: delegate to VM -> queue (1-at-a-time, pauseable)
+        _vm.StartUploads();
 
-            string sessionId = await _manager.StartUploadAsync(
-                userId,
-                paths,
-                (path, percent) => OnProgress(path, percent),
-                _cts.Token
-            );
-
-            _vm.SessionId = sessionId;
-            _vm.SessionStatus = "Upload finished. Session: " + sessionId;
-        }
-        catch (OperationCanceledException)
-        {
-            _vm.SessionStatus = "Upload canceled.";
-        }
-        catch (Exception ex)
-        {
-            _vm.SessionStatus = "Upload failed: " + ex.Message;
-        }
-
-        // ✅ mark as finished, re-enable only if files are not all completed
-        _isRunning = false;
-        RaiseCanExecuteChanged();
-    }
-
-    private void OnProgress(string path, int percent)
-    {
-        var row = FindRowByPath(path);
-        if (row != null)
-        {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                row.Progress = percent;
-                row.Status = percent >= 100 ? "Completed" : "Uploading";
-
-                int completed = 0;
-                foreach (var f in _vm.Files)
-                    if (string.Equals(f.Status, "Completed", StringComparison.OrdinalIgnoreCase))
-                        completed++;
-
-                _vm.OverallProgress = (double)completed / _vm.Files.Count * 100.0;
-                _vm.OverallProgressText = $"Overall: {completed} / {_vm.Files.Count} files uploaded";
-
-                RaiseCanExecuteChanged(); // keep button state in sync
-            });
-        }
-    }
-
-    private FileRow? FindRowByPath(string path)
-    {
-        if (_vm.Files == null) return null;
-        foreach (var row in _vm.Files)
-        {
-            if (string.Equals(row.FullPath, path, StringComparison.OrdinalIgnoreCase))
-                return row;
-        }
-        return null;
+        // keep disabled while running; re-enabled by VM when everything completes or new files are added
     }
 }

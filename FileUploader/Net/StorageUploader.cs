@@ -1,45 +1,51 @@
-﻿using System.IO;
+﻿using FileUploadClient.Wpf.Util;
+using System;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-public class StorageUploader : IStorageUploader
+public class StorageUploader : IStorageUploader, IDisposable
 {
     private readonly HttpClient _http;
 
     public StorageUploader()
     {
         _http = new HttpClient();
+        _http.DefaultRequestHeaders.ExpectContinue = false;
     }
 
-    public async Task<string> PutChunkAsync(string presignedUrl, Stream content, long contentLength, CancellationToken ct)
+    public async Task<string> UploadPartAsync(string presignedUrl,
+                                              Stream partStream,
+                                              long contentLength,
+                                              CancellationToken ct)
     {
+        NetLog.Line($"REQUEST  PUT {NetLog.Trunc(presignedUrl, 200)}");
+        NetLog.Line($"Request Headers: Content-Length={contentLength}");
+
         using var req = new HttpRequestMessage(HttpMethod.Put, presignedUrl);
-        using var sc = new StreamContent(content);
-        sc.Headers.ContentLength = contentLength;
-        req.Content = sc;
+        req.Content = new StreamContent(partStream);
+        req.Content.Headers.ContentLength = contentLength;
 
-        var r = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+        using HttpResponseMessage resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
 
-        // Surface full S3 error body (was “Failed: response” before)
-        if (!r.IsSuccessStatusCode)
-        {
-            string body = string.Empty;
-            try { body = await r.Content.ReadAsStringAsync(ct); } catch { /* ignore */ }
-            throw new HttpRequestException(
-                $"S3 PUT failed: {(int)r.StatusCode} {r.ReasonPhrase}. Body: {body}");
-        }
+        string? etag = null;
+        if (resp.Headers.TryGetValues("ETag", out var values))
+            etag = values.FirstOrDefault();
+        else if (resp.Headers.ETag != null)
+            etag = resp.Headers.ETag.Tag;
 
-        string etag = null;
+        NetLog.Line($"RESPONSE ({(int)resp.StatusCode}) {resp.StatusCode}");
+        NetLog.Line($"ETag Header: {etag ?? "(none)"}");
 
-        if (r.Headers.ETag != null)
-            etag = r.Headers.ETag.Tag?.Trim('"');
-        else if (r.Headers.Contains("ETag"))
-            foreach (var v in r.Headers.GetValues("ETag")) { etag = v?.Trim('"'); break; }
+        resp.EnsureSuccessStatusCode();
 
-        if (string.IsNullOrEmpty(etag))
-            throw new InvalidOperationException("Missing ETag from S3 part upload response.");
+        if (string.IsNullOrWhiteSpace(etag))
+            throw new InvalidOperationException("Upload succeeded but no ETag was returned by storage.");
 
-        return etag;
+        return etag.Trim().Trim('"'); // normalize
     }
+
+    public void Dispose() => _http.Dispose();
 }

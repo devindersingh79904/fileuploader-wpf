@@ -1,9 +1,5 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace FileUploader.Dtos.Responses
 {
@@ -12,8 +8,12 @@ namespace FileUploader.Dtos.Responses
         [JsonProperty("sessionId")]
         public string SessionId { get; set; }
 
+        // Session status (e.g., IN_PROGRESS, PAUSED, COMPLETED)
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
         [JsonProperty("files")]
-        public List<FileStatusItem> Files { get; set; }
+        public List<FileStatusItem> Files { get; set; } = new();
 
         public class FileStatusItem
         {
@@ -29,11 +29,12 @@ namespace FileUploader.Dtos.Responses
             [JsonProperty("uploadedChunks")]
             public int UploadedChunks { get; set; }
 
+            // IMPORTANT: this is called "status" in the server JSON
             [JsonProperty("status")]
-            public string Status { get; set; }  // backend enum FileStatus → map as string
+            public string Status { get; set; }
 
-            [JsonProperty("pendingChunkIndexes")]
-            public List<int> PendingChunkIndexes { get; set; }
+            [JsonProperty("pending")]
+            public List<int> Pending { get; set; } = new();
         }
     }
 }

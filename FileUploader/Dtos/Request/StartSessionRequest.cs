@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FileUploader.Dtos
+namespace FileUploader.Dtos.Request
 {
     public class StartSessionRequest
     {

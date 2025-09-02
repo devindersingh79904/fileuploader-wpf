@@ -4,6 +4,12 @@ using System.Threading.Tasks;
 
 public interface IStorageUploader
 {
-    // Returns the ETag string from S3 response
-    Task<string> PutChunkAsync(string presignedUrl, Stream content, long contentLength, CancellationToken ct);
+    /// <summary>
+    /// Upload a single part to the pre-signed URL and return the ETag
+    /// returned by the storage provider (e.g., S3).
+    /// </summary>
+    Task<string> UploadPartAsync(string presignedUrl,
+                                 Stream partStream,
+                                 long contentLength,
+                                 CancellationToken ct);
 }

@@ -14,16 +14,17 @@ namespace FileUploader.ViewModels.Commands
         }
 
         public event EventHandler? CanExecuteChanged;
+        public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 
         public bool CanExecute(object? parameter)
         {
             if (_vm.Files == null || _vm.Files.Count == 0) return false;
 
-            // Allow pause when anything is actively uploading or waiting in queue
             foreach (var row in _vm.Files)
             {
-                if (string.Equals(row.Status, "Uploading", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(row.Status, "Queued", StringComparison.OrdinalIgnoreCase))
+                var s = row.Status ?? "";
+                if (s.Equals("Queued", StringComparison.OrdinalIgnoreCase) ||
+                    s.Equals("Uploading", StringComparison.OrdinalIgnoreCase))
                     return true;
             }
             return false;
@@ -33,14 +34,14 @@ namespace FileUploader.ViewModels.Commands
         {
             if (_vm.Files == null || _vm.Files.Count == 0) return;
 
-            // 1) pause engine + queue
+            // pause engine + queue
             _vm.PauseAllUploads();
 
-            // 2) mark UI rows
+            // mark UI rows
             foreach (FileRow row in _vm.Files)
             {
-                if (row.Status.Equals("Uploading", StringComparison.OrdinalIgnoreCase) ||
-                    row.Status.Equals("Queued", StringComparison.OrdinalIgnoreCase))
+                if (row.Status.Equals("Queued", StringComparison.OrdinalIgnoreCase) ||
+                    row.Status.Equals("Uploading", StringComparison.OrdinalIgnoreCase))
                 {
                     row.Status = "Paused";
                 }
@@ -48,13 +49,11 @@ namespace FileUploader.ViewModels.Commands
 
             _vm.SessionStatus = "All uploads paused.";
 
-            // 3) notify commands to re-check CanExecute
-            RaiseCanExecuteChanged();                 // this command
-            _vm.ResumeAllCommand.RaiseCanExecuteChanged(); // resume becomes enabled now
-            _vm.StartUploadCommand?.RaiseCanExecuteChanged();
-            _vm.CancelAllCommand?.RaiseCanExecuteChanged();
+            // reevaluate buttons
+            RaiseCanExecuteChanged();
+            _vm.ResumeAllCommand.RaiseCanExecuteChanged();
+            _vm.StartUploadCommand.RaiseCanExecuteChanged();
+            _vm.CancelAllCommand.RaiseCanExecuteChanged();
         }
-
-        public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
 }

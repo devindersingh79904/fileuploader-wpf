@@ -1,5 +1,5 @@
 ﻿using FileUploadClient.Wpf.Config;
-using FileUploader.Dtos;
+using FileUploadClient.Wpf.Util;
 using FileUploader.Dtos.Request;
 using FileUploader.Dtos.Responses;
 using Newtonsoft.Json;
@@ -15,61 +15,94 @@ public class FileUploadApi : IFileUploadApi
 
     public FileUploadApi()
     {
-        _http = new HttpClient();
-        // IMPORTANT: AppConfig.BaseUrl must end with "/api/v1/upload/"
-        _http.BaseAddress = new Uri(AppConfig.BaseUrl);
-        // _http.Timeout = TimeSpan.FromSeconds(100);
+        // Every request will be logged by LoggingHandler
+        var handler = new LoggingHandler(new HttpClientHandler());
+        _http = new HttpClient(handler) { BaseAddress = new Uri(AppConfig.BaseUrl) };
     }
 
     public async Task<StartSessionResponse> StartSessionAsync(StartSessionRequest request, CancellationToken ct)
     {
-        var r = await _http.PostAsync("start", AsJson(request), ct);
-        if (!r.IsSuccessStatusCode) await ThrowWithBody(r, ct);
-        return JsonConvert.DeserializeObject<StartSessionResponse>(await r.Content.ReadAsStringAsync());
+        string body = JsonConvert.SerializeObject(request);
+        using var content = new StringContent(body, Encoding.UTF8, "application/json");
+        using var req = new HttpRequestMessage(HttpMethod.Post, "start") { Content = content };
+
+        using HttpResponseMessage r = await _http.SendAsync(req, ct);
+        r.EnsureSuccessStatusCode();
+        string s = await r.Content.ReadAsStringAsync();
+        return JsonConvert.DeserializeObject<StartSessionResponse>(s);
     }
 
     public async Task<RegisterFileResponse> RegisterFileAsync(string sessionId, RegisterFileRequest request, CancellationToken ct)
     {
-        var r = await _http.PostAsync($"{sessionId}/files", AsJson(request), ct);
-        if (!r.IsSuccessStatusCode) await ThrowWithBody(r, ct);
-        return JsonConvert.DeserializeObject<RegisterFileResponse>(await r.Content.ReadAsStringAsync());
+        string body = JsonConvert.SerializeObject(request);
+        using var content = new StringContent(body, Encoding.UTF8, "application/json");
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"{sessionId}/files") { Content = content };
+
+        using HttpResponseMessage r = await _http.SendAsync(req, ct);
+        r.EnsureSuccessStatusCode();
+        string s = await r.Content.ReadAsStringAsync();
+        return JsonConvert.DeserializeObject<RegisterFileResponse>(s);
     }
 
     public async Task<PresignPartUrlResponse> PresignPartUrlAsync(string fileId, PresignPartUrlRequest request, CancellationToken ct)
     {
-        // NOTE: correct route is under files/{fileId}/parts/url
-        var r = await _http.PostAsync($"files/{fileId}/parts/url", AsJson(request), ct);
-        if (!r.IsSuccessStatusCode) await ThrowWithBody(r, ct);
-        return JsonConvert.DeserializeObject<PresignPartUrlResponse>(await r.Content.ReadAsStringAsync());
+        string body = JsonConvert.SerializeObject(request);
+        using var content = new StringContent(body, Encoding.UTF8, "application/json");
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"files/{fileId}/parts/url") { Content = content };
+
+        using HttpResponseMessage r = await _http.SendAsync(req, ct);
+        r.EnsureSuccessStatusCode();
+        string s = await r.Content.ReadAsStringAsync();
+        return JsonConvert.DeserializeObject<PresignPartUrlResponse>(s);
     }
 
     public async Task CompleteFileAsync(string fileId, CompleteFileRequest request, CancellationToken ct)
     {
-        // NOTE: correct route is files/{fileId}/complete (PATCH)
-        var req = new HttpRequestMessage(HttpMethod.Patch, $"files/{fileId}/complete")
-        {
-            Content = AsJson(request)
-        };
-        var r = await _http.SendAsync(req, ct);
-        if (!r.IsSuccessStatusCode) await ThrowWithBody(r, ct);
+        string body = JsonConvert.SerializeObject(request);
+        using var content = new StringContent(body, Encoding.UTF8, "application/json");
+        using var req = new HttpRequestMessage(HttpMethod.Patch, $"files/{fileId}/complete") { Content = content };
+
+        using HttpResponseMessage r = await _http.SendAsync(req, ct);
+        r.EnsureSuccessStatusCode();
     }
 
     public async Task<SessionStatusResponse> GetSessionStatusAsync(string sessionId, CancellationToken ct)
     {
-        var r = await _http.GetAsync($"{sessionId}/status", ct);
-        if (!r.IsSuccessStatusCode) await ThrowWithBody(r, ct);
-        return JsonConvert.DeserializeObject<SessionStatusResponse>(await r.Content.ReadAsStringAsync());
+        using var req = new HttpRequestMessage(HttpMethod.Get, $"{sessionId}/status");
+        using HttpResponseMessage r = await _http.SendAsync(req, ct);
+        r.EnsureSuccessStatusCode();
+        string s = await r.Content.ReadAsStringAsync();
+        return JsonConvert.DeserializeObject<SessionStatusResponse>(s);
     }
 
-    // ---- helpers ----
-    private static StringContent AsJson(object o)
-        => new StringContent(JsonConvert.SerializeObject(o), Encoding.UTF8, "application/json");
-
-    private static async Task ThrowWithBody(HttpResponseMessage r, CancellationToken ct)
+    public async Task<FilePartsResponse> GetFilePartsAsync(string fileId, CancellationToken ct)
     {
-        string body = string.Empty;
-        try { body = await r.Content.ReadAsStringAsync(ct); } catch { /* ignore */ }
-        throw new HttpRequestException(
-            $"API {r.RequestMessage?.Method} {r.RequestMessage?.RequestUri} failed: {(int)r.StatusCode} {r.ReasonPhrase}. Body: {body}");
+        using var req = new HttpRequestMessage(HttpMethod.Get, $"files/{fileId}/parts");
+        using HttpResponseMessage r = await _http.SendAsync(req, ct);
+        r.EnsureSuccessStatusCode();
+        string s = await r.Content.ReadAsStringAsync();
+        return JsonConvert.DeserializeObject<FilePartsResponse>(s);
+    }
+
+    // ---- Session-level controls ----
+    public async Task PauseSessionAsync(string sessionId, CancellationToken ct)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Patch, $"{sessionId}/pause");
+        using HttpResponseMessage r = await _http.SendAsync(req, ct);
+        r.EnsureSuccessStatusCode();
+    }
+
+    public async Task ResumeSessionAsync(string sessionId, CancellationToken ct)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Patch, $"{sessionId}/resume");
+        using HttpResponseMessage r = await _http.SendAsync(req, ct);
+        r.EnsureSuccessStatusCode();
+    }
+
+    public async Task CompleteSessionAsync(string sessionId, CancellationToken ct)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Patch, $"{sessionId}/complete");
+        using HttpResponseMessage r = await _http.SendAsync(req, ct);
+        r.EnsureSuccessStatusCode();
     }
 }

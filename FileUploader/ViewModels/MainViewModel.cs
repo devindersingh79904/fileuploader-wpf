@@ -1,4 +1,4 @@
-﻿using FileUploader.Dtos;
+﻿using FileUploader.Dtos.Request;
 using FileUploader.Dtos.Responses;
 using FileUploader.Models;
 using FileUploader.ViewModels.Commands;
@@ -12,6 +12,12 @@ namespace FileUploader.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
+        // ===== INotifyPropertyChanged =====
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged(string propertyName)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+        // ===== Data =====
         public ObservableCollection<FileRow> Files { get; }
 
         public SelectFilesCommand SelectFilesCommand { get; }
@@ -21,16 +27,19 @@ namespace FileUploader.ViewModels
         public ResumeAllCommand ResumeAllCommand { get; }
         public CancelAllCommand CancelAllCommand { get; }
 
-        private bool _sessionCreated = false;
+        private bool _sessionCreated;
+        private bool _sessionCompleted;
 
-        private string _sessionId;
+        private int _expectedFileCount = 0; // NEW: track how many files should complete
+
+        private string _sessionId = string.Empty;
         public string SessionId
         {
             get => _sessionId;
             set { if (_sessionId != value) { _sessionId = value; OnPropertyChanged(nameof(SessionId)); } }
         }
 
-        private string _sessionStatus;
+        private string _sessionStatus = string.Empty;
         public string SessionStatus
         {
             get => _sessionStatus;
@@ -41,21 +50,24 @@ namespace FileUploader.ViewModels
         public double OverallProgress
         {
             get => _overallProgress;
-            set { if (_overallProgress != value) { _overallProgress = value; OnPropertyChanged(nameof(OverallProgress)); } }
+            set { if (Math.Abs(_overallProgress - value) > double.Epsilon) { _overallProgress = value; OnPropertyChanged(nameof(OverallProgress)); } }
         }
 
-        private string _overallProgressText = "Overall: 0 / 0 files";
+        private string _overallProgressText = "Overall: 0 / 0 files uploaded";
         public string OverallProgressText
         {
             get => _overallProgressText;
             set { if (_overallProgressText != value) { _overallProgressText = value; OnPropertyChanged(nameof(OverallProgressText)); } }
         }
 
+        // ===== Services / state =====
         private readonly QueuedUploadService _queued;
         private readonly IUploadManager _uploadManager;
+        private readonly IFileUploadApi _api;
         private readonly string _userId = "c001";
 
-        private string _activeFilePath;
+        // expose active file so commands can mark it paused immediately
+        public string? ActiveFilePath { get; private set; }
 
         public MainViewModel()
         {
@@ -68,52 +80,42 @@ namespace FileUploader.ViewModels
             ResumeAllCommand = new ResumeAllCommand(this);
             CancelAllCommand = new CancelAllCommand(this);
 
-            var api = new FileUploadApi();
+            _api = new FileUploadApi();
             var storage = new StorageUploader();
-            _uploadManager = new UploadManager(api, storage);
+            _uploadManager = new UploadManager(_api, storage);
             _queued = new QueuedUploadService(_uploadManager);
 
+            // Queue -> UI + command state
             _queued.OnQueued += fp => { UpdateRow(fp, "Queued", 0); NotifyCommandStates(); };
-            _queued.OnStarted += fp => { _activeFilePath = fp; UpdateRow(fp, "Uploading", 0); NotifyCommandStates(); };
+            _queued.OnStarted += fp => { ActiveFilePath = fp; UpdateRow(fp, "Uploading", 0); NotifyCommandStates(); };
             _queued.OnProgress += (fp, p) => { UpdateRow(fp, "Uploading", p); };
-            _queued.OnCompleted += fp => { if (_activeFilePath == fp) _activeFilePath = null; UpdateRow(fp, "Completed", 100); NotifyCommandStates(); };
-            _queued.OnFailed += (fp, ex) => { if (_activeFilePath == fp) _activeFilePath = null; UpdateRow(fp, $"Failed: {ex.Message}", 0); NotifyCommandStates(); };
+            _queued.OnCompleted += fp =>
+            {
+                if (ActiveFilePath == fp) ActiveFilePath = null;
+                UpdateRow(fp, "Completed", 100);
+                NotifyCommandStates();
+                TryCompleteSessionIfDone();
+            };
+            _queued.OnFailed += (fp, ex) =>
+            {
+                if (ActiveFilePath == fp) ActiveFilePath = null;
+                UpdateRow(fp, $"Failed: {ex.Message}", 0);
+                NotifyCommandStates();
+            };
 
             Files.CollectionChanged += OnFilesCollectionChanged;
         }
 
+        // ===== Public ops called by commands =====
         public void StartUploads()
         {
-            foreach (var file in Files)
-                _ = _queued.EnqueueFileAsync(_userId, file.FullPath, CancellationToken.None);
-
-            NotifyCommandStates();
-        }
-
-        public void PauseAllUploads()
-        {
-            _queued.PauseAll();
-            NotifyCommandStates();
-        }
-
-        public void ResumeAllUploads()
-        {
-            _queued.ResumeAll();
-
-            foreach (var row in Files)
-                if (string.Equals(row.Status, "Paused", StringComparison.OrdinalIgnoreCase))
-                    row.Status = "Queued";
-
-            if (!string.IsNullOrWhiteSpace(_activeFilePath))
+            foreach (var f in Files)
             {
-                var row = FindRow(_activeFilePath);
-                if (row != null)
-                    _ = _queued.EnqueueFileAsync(_userId, row.FullPath, CancellationToken.None);
-
-                _activeFilePath = null;
+                if (!"Completed".Equals(f.Status, StringComparison.OrdinalIgnoreCase))
+                    _ = _queued.EnqueueFileAsync(_userId, f.FullPath, CancellationToken.None);
             }
 
-            SessionStatus = "Resumed uploads.";
+            _sessionCompleted = false;
             NotifyCommandStates();
         }
 
@@ -124,26 +126,48 @@ namespace FileUploader.ViewModels
             try
             {
                 SessionStatus = "Creating session...";
-                var request = new StartSessionRequest { UserId = _userId };
-                var response = await new FileUploadApi().StartSessionAsync(request, CancellationToken.None);
-
-                SessionId = response.SessionId;
+                var resp = await _api.StartSessionAsync(new StartSessionRequest { UserId = _userId }, CancellationToken.None);
+                SessionId = resp.SessionId;
                 SessionStatus = "Session created: " + SessionId;
             }
-            catch (System.Net.Http.HttpRequestException httpEx)
-            {
-                SessionStatus = "Network error: " + httpEx.Message;
-            }
-            catch (Exception ex)
-            {
-                SessionStatus = "Failed: " + ex.Message;
-            }
+            catch (Exception ex) { SessionStatus = "Failed: " + ex.Message; }
         }
 
-        private void OnFilesCollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        public async void PauseAllUploads()
+        {
+            _queued.PauseAll();
+            if (!string.IsNullOrWhiteSpace(SessionId))
+            {
+                try { await _api.PauseSessionAsync(SessionId, CancellationToken.None); }
+                catch (Exception ex) { SessionStatus = "Server pause failed: " + ex.Message; }
+            }
+            NotifyCommandStates();
+        }
+
+        public async void ResumeAllUploads()
+        {
+            foreach (var row in Files)
+            {
+                if ("Paused".Equals(row.Status, StringComparison.OrdinalIgnoreCase))
+                    row.Status = "Queued";
+            }
+
+            if (!string.IsNullOrWhiteSpace(SessionId))
+            {
+                try { await _api.ResumeSessionAsync(SessionId, CancellationToken.None); }
+                catch (Exception ex) { SessionStatus = "Server resume failed: " + ex.Message; }
+            }
+
+            _queued.ResumeAll();
+            SessionStatus = "Resumed uploads.";
+            NotifyCommandStates();
+        }
+
+        // ===== Collection / UI helpers =====
+        private void OnFilesCollectionChanged(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             NotifyCommandStates();
-            RecalculateOverallProgress();
+            RecalcOverallFilesText();
         }
 
         public void AddFiles(string[] filePaths)
@@ -152,11 +176,13 @@ namespace FileUploader.ViewModels
             for (int i = 0; i < filePaths.Length; i++)
                 Files.Add(FileRow.FromPath(filePaths[i], start + i));
 
+            // Track how many files are expected for this session
+            _expectedFileCount = Files.Count;
+
             NotifyCommandStates();
-            RecalculateOverallProgress();
+            RecalcOverallFilesText();
         }
 
-        // ---- Helpers ----
         private void UpdateRow(string filePath, string status, int percent)
         {
             var row = FindRow(filePath);
@@ -165,11 +191,10 @@ namespace FileUploader.ViewModels
                 row.Status = status;
                 row.Progress = percent;
             }
-
-            RecalculateOverallProgress();
+            RecalcOverallFilesText();
         }
 
-        private FileRow FindRow(string filePath)
+        public FileRow? FindRow(string filePath)
         {
             foreach (var f in Files)
                 if (string.Equals(f.FullPath, filePath, StringComparison.OrdinalIgnoreCase))
@@ -177,25 +202,43 @@ namespace FileUploader.ViewModels
             return null;
         }
 
-        private void RecalculateOverallProgress()
+        private void RecalcOverallFilesText()
         {
-            if (Files == null || Files.Count == 0)
+            int total = Files?.Count ?? 0;
+            int completed = 0;
+            if (total > 0)
             {
-                OverallProgress = 0;
-                OverallProgressText = "Overall: 0 / 0 files";
-                return;
+                foreach (var f in Files)
+                    if ("Completed".Equals(f.Status, StringComparison.OrdinalIgnoreCase))
+                        completed++;
             }
+            OverallProgress = total == 0 ? 0 : (double)completed / total * 100.0;
+            OverallProgressText = $"Overall: {completed} / {total} files uploaded";
+        }
 
-            int total = Files.Count;
+        private async void TryCompleteSessionIfDone()
+        {
+            if (_sessionCompleted) return;
+            if (string.IsNullOrWhiteSpace(SessionId)) return;
+
             int completed = 0;
             foreach (var f in Files)
-            {
-                if (string.Equals(f.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+                if ("Completed".Equals(f.Status, StringComparison.OrdinalIgnoreCase))
                     completed++;
-            }
 
-            OverallProgress = (double)completed / total * 100.0;
-            OverallProgressText = $"Overall: {completed} / {total} files uploaded";
+            if (completed == _expectedFileCount && _expectedFileCount > 0)
+            {
+                try
+                {
+                    await _api.CompleteSessionAsync(SessionId, CancellationToken.None);
+                    _sessionCompleted = true;
+                    SessionStatus = "Session completed on server.";
+                }
+                catch (Exception ex)
+                {
+                    SessionStatus = "Server completion failed: " + ex.Message;
+                }
+            }
         }
 
         public void NotifyCommandStates()
@@ -205,9 +248,5 @@ namespace FileUploader.ViewModels
             ResumeAllCommand?.RaiseCanExecuteChanged();
             CancelAllCommand?.RaiseCanExecuteChanged();
         }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged(string propertyName)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }
